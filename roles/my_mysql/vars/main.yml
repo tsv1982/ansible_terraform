@@ -1,0 +1,7 @@
+---
+# vars file for my_mysql
+ansible_user                : ubuntu
+ansible_ssh_private_key_file: ~/ansible/terraform-key-pair1.pem
+mysql_root_user             : root 
+mysql_tsv_user              : petclinic
+db_name                     : petclinic

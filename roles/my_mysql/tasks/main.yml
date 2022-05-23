@@ -1,0 +1,100 @@
+---
+# tasks file for my_mysql
+
+- name: Install MySQL
+  apt:
+       name: "{{ item }}"
+       state: present
+       update_cache: yes
+  loop:
+       - mysql-server
+       - mysql-client
+       - python3-mysqldb
+       - mysql-common
+    
+      
+#  when: ansible_distribution == 'Ubuntu'
+
+
+- name: Generate password random
+  set_fact:
+       mysql_root_password: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
+       mysql_tsv_password: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
+- debug:
+       msg: "{{ mysql_tsv_password }}"
+
+
+- name: Create my.cnf with root password credentials
+  become: yes
+  no_log: yes
+  template:
+       src:  my.cnf.j2
+       dest: /root/.my.cnf
+       owner: root
+       group: root
+       mode: 0600
+  loop:
+       - password: "{{ mysql_root_password }}"
+
+
+- name: Create user root
+  become: true
+  no_log: true
+  mysql_user:
+       name: "{{ mysql_root_user }}"
+       host: "{{ item }}"
+       password: "{{ mysql_root_password }}"
+       login_user: "{{ mysql_root_user }}"
+       login_password: "{{ mysql_root_password }}"
+       check_implicit_admin: yes
+       state: present
+       update_password: always
+  loop:
+       - 127.0.0.1
+       - localhost
+
+
+
+- name: Create the MySQL database
+  community.mysql.mysql_db:
+    check_implicit_admin: no
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+    name: "{{db_name}}" 
+    state: present
+
+- debug: 
+    msg: "{{db_name}}"
+
+
+- name: Create user tsv
+  become: true
+#  no_log: true
+  mysql_user:     
+       name: "{{ mysql_tsv_user }}"
+       host: "{{ item }}"
+       password: "{{ mysql_tsv_password }}"       
+       check_implicit_admin: yes
+       login_user: "{{ mysql_root_user }}"
+       login_password: "{{ mysql_root_password }}"
+       priv: "{{db_name}}.*:ALL"
+#       priv: "{{db_name}}.*:SELECT,UPDATE,DELETE,INSERT,CREATE,DROP,INDEX,ALTER,LOCK TABLES,EXECUTE,CREATE TEMPORARY TABLES,EXECUTE,TRIGGER,CREATE VIEW,SHOW VIEW,EVENT,REQUIRESSL"
+       state: present
+       append_privs: yes
+       update_password: always
+  loop:
+       - 127.0.0.1
+       - localhost
+       - "{{ ansible_host }}"
+
+
+
+- name: Start MySQL
+  service:
+        name: mysql
+        state: started
+        enabled: yes
+
+
+
+

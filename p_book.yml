@@ -1,0 +1,9 @@
+---
+- name: test connect
+  hosts: mysql
+  gather_facts: false
+  become: true
+
+
+  roles:
+    - my_mysql
